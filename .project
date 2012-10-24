@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<projectDescription>
+	<name>FaaFar77SurfaceGeneration</name>
+	<comment></comment>
+	<projects>
+	</projects>
+	<buildSpec>
+		<buildCommand>
+			<name>org.python.pydev.PyDevBuilder</name>
+			<arguments>
+			</arguments>
+		</buildCommand>
+	</buildSpec>
+	<natures>
+		<nature>com.aptana.projects.webnature</nature>
+		<nature>org.python.pydev.pythonNature</nature>
+	</natures>
+	<filteredResources>
+		<filter>
+			<id>1350506085509</id>
+			<name></name>
+			<type>13</type>
+			<matcher>
+				<id>org.eclipse.ui.ide.multiFilter</id>
+				<arguments>1.0-name-matches-false-true-.+\.pyt?$</arguments>
+			</matcher>
+		</filter>
+	</filteredResources>
+</projectDescription>
