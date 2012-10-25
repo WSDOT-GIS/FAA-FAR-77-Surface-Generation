@@ -82,10 +82,11 @@ class Far77Params(object):
 
 class LineToFar77(object):
     _IN_FEATURES_INDEX = 0
-    _ELEVATION_DATA = 1
-    _IS_PREPARED_HARD_SURFACE_INDEX = 2
-    _RUNWAY_TYPE_INDEX = 3
-    _OUTPUT_FEATURE_CLASS_INDEX = 4
+    _PRODUCTION_DB_INDEX = 1
+    _ELEVATION_DATA = 2
+    _IS_PREPARED_HARD_SURFACE_INDEX = 3
+    _RUNWAY_TYPE_INDEX = 4
+    _OUTPUT_FEATURE_CLASS_INDEX = 5
     
     def __init__(self):
         """Define the tool (tool name is the name of the class)."""
@@ -101,6 +102,16 @@ class LineToFar77(object):
             direction="Input",
             datatype="Feature Set",
             parameterType="Required")
+        # Supply a template for the line feature set.
+        lineFeaturesParam.value = os.path.join(os.path.dirname(__file__),
+           "Data", "Templates", "ProductionWorkspace.gdb", "Airfield", 
+           "RunwayCenterline")
+        
+        productionLibraryParam = arcpy.Parameter(
+             name="production_database",
+             displayName="Production Database",
+             direction="Input",
+             datatype="Workspace")
         
         elevationParam = arcpy.Parameter(
             name="elevation_layer",
@@ -111,10 +122,6 @@ class LineToFar77(object):
                       "Terrain Layer",
                       "TIN Layer"],
             parameterType="Required")
-        # Supply a template for the line feature set.
-        lineFeaturesParam.value = os.path.join(os.path.dirname(__file__),
-           "Data", "Templates", "ProductionWorkspace.gdb", "Airfield", 
-           "RunwayCenterline")
         
         #clearwayLengthParam = arcpy.Parameter(
         #      name="clear_way_length",
@@ -156,8 +163,9 @@ class LineToFar77(object):
             direction="Output",
             datatype="Feature Class",
             parameterType="Required")
+        outputFCParam.value = arcpy.CreateUniqueName("faafar77", arcpy.env.scratchGDB)
         
-        params = [lineFeaturesParam, elevationParam, isPreparedHardSurfaceParam, 
+        params = [lineFeaturesParam, productionLibraryParam, elevationParam, isPreparedHardSurfaceParam, 
                   runwayTypeParam, outputFCParam]
         return params
 
@@ -178,6 +186,16 @@ class LineToFar77(object):
     def updateMessages(self, parameters):
         """Modify the messages created by internal validation for each tool
         parameter.  This method is called after internal validation."""
+        productionWSParam = parameters[self._PRODUCTION_DB_INDEX]
+        if productionWSParam.altered:
+            if not arcpy.Exists(productionWSParam.valueAsText):
+                # Add a standard "Workspace does not exist" message.
+                productionWSParam.setIDMessage(message_type="ERROR", 
+                                               message_ID=000535)
+            else:
+                # If no problems are detected, clear messages
+                productionWSParam.clearMessage()
+                pass
         return
 
     def execute(self, parameters, messages):
@@ -188,6 +206,7 @@ class LineToFar77(object):
         # Feature Set
         in_features = parameters[self._IN_FEATURES_INDEX].value
         in_surface = parameters[self._ELEVATION_DATA].valueAsText
+        production_workspace = parameters[self._PRODUCTION_DB_INDEX].valueAsText
         isPreparedHardSurface = parameters[self._IS_PREPARED_HARD_SURFACE_INDEX].value
         runway_type = parameters[self._RUNWAY_TYPE_INDEX].value
         out_featureclass = parameters[self._OUTPUT_FEATURE_CLASS_INDEX].valueAsText
@@ -227,13 +246,15 @@ class LineToFar77(object):
         arcpy.AddMessage("Executing Interpolate Shape tool")
         # Get the elevations of the runways.  Output will be in a new feature class. 
         # Create the name for the output runways feature class with elevations.
-        in_features3D = arcpy.CreateUniqueName("runwayCenterlines", arcpy.env.scratchGDB)
+        in_features3D = arcpy.CreateUniqueName("runwayCenterlines", production_workspace)
         
         # Create output feature class.
         out_path, out_name = os.path.split(out_featureclass)
-        template = os.path.join(os.path.dirname(__file__),
-           "Data", "Templates", "ProductionWorkspace.gdb", "Airspace", 
-           "ObstructionIdSurface")
+        ##template = os.path.join(os.path.dirname(__file__),
+        ##   "Data", "Templates", "ProductionWorkspace.gdb", "Airspace", 
+        ##   "ObstructionIdSurface")
+        template = os.path.join(production_workspace, "Airspace", 
+                                "ObstructionIdSurface")
         arcpy.AddMessage("Creating featureclass %s in %s using template %s..." % (out_name, out_path, template))
         arcpy.management.CreateFeatureclass(out_path, out_name, 
                                             template=template,
@@ -247,7 +268,7 @@ class LineToFar77(object):
         try:
             # execute the FAA FAR 77 tool
             arcpy.FAAFAR77_aeronautical(in_features3D, 
-                                        arcpy.env.scratchGDB, 
+                                        production_workspace, 
                                         out_featureclass,
                                         clear_way_length, 
                                         runway_type, 
@@ -272,6 +293,7 @@ class LineToFar77(object):
             arcpy.AddMessage(arcpy.GetMessages())
             raise
         finally:
-            arcpy.management.Delete(in_features3D)
+            if arcpy.Exists(in_features3D):
+                arcpy.management.Delete(in_features3D)
              
         return
