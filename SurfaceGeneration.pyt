@@ -171,8 +171,8 @@ class LineToFar77(object):
         has been changed."""
         outputFCParam = parameters[self._OUTPUT_FEATURE_CLASS_INDEX]
         if not outputFCParam.altered:
-            outputFCParam.value = os.path.join(arcpy.env.scratchGDB, 
-                                       "far77%s" % uuid.uuid1())
+            outputFCParam.value = arcpy.CreateUniqueName("faafar77", arcpy.env.scratchGDB)
+            #outputFCParam.value = os.path.join(arcpy.env.scratchGDB,"far77%s" % uuid.uuid1())
         return
 
     def updateMessages(self, parameters):
@@ -192,16 +192,21 @@ class LineToFar77(object):
         runway_type = parameters[self._RUNWAY_TYPE_INDEX].value
         out_featureclass = parameters[self._OUTPUT_FEATURE_CLASS_INDEX].valueAsText
         
+        result = arcpy.management.GetCount(in_features)
+        inFeatureCount = result.getOutput(0)
+        arcpy.AddMessage("in_features: %s" % inFeatureCount)
+        inFeatureCount = int(inFeatureCount)
+        
+        if inFeatureCount <= 0:
+            arcpy.AddWarning("in_features contains no features. %s" % inFeatureCount)
+            return
+        
         clear_way_length = 0
         if not isPreparedHardSurface:
             clear_way_length = 200
         
-        use_predefined_database_specification = "PREDEFINED_SPECIFICATION"
-        create_surface = ["PRIMARY_SURFACE",
-                          "APPROACH_SURFACE",
-                          "HORIZONTAL_SURFACE",
-                          "CONICAL_SURFACE",
-                          "TRANSITIONAL_SURFACE"]
+        use_predefined_database_specification = "CUSTOM_SPECIFICATION"
+        create_surface = "PRIMARY_SURFACE;APPROACH_SURFACE;HORIZONTAL_SURFACE;CONICAL_SURFACE;TRANSITIONAL_SURFACE"
         
         # Set the other parameters appropriate for the runway type.
         far77Params = Far77Params(runway_type)
@@ -223,6 +228,17 @@ class LineToFar77(object):
         # Get the elevations of the runways.  Output will be in a new feature class. 
         # Create the name for the output runways feature class with elevations.
         in_features3D = arcpy.CreateUniqueName("runwayCenterlines", arcpy.env.scratchGDB)
+        
+        # Create output feature class.
+        out_path, out_name = os.path.split(out_featureclass)
+        template = os.path.join(os.path.dirname(__file__),
+           "Data", "Templates", "ProductionWorkspace.gdb", "Airspace", 
+           "ObstructionIdSurface")
+        arcpy.AddMessage("Creating featureclass %s in %s using template %s..." % (out_name, out_path, template))
+        arcpy.management.CreateFeatureclass(out_path, out_name, 
+                                            template=template,
+                                            has_z="SAME_AS_TEMPLATE")
+        
         arcpy.InterpolateShape_3d(in_surface, in_features, in_features3D, 
                                   vertices_only="VERTICES_ONLY")
         
@@ -230,8 +246,12 @@ class LineToFar77(object):
         
         try:
             # execute the FAA FAR 77 tool
-            arcpy.FAAFAR77_aeronautical(in_features3D, arcpy.env.scratchGDB, 
-                                        clear_way_length, runway_type, 
+            arcpy.FAAFAR77_aeronautical(in_features3D, 
+                                        arcpy.env.scratchGDB, 
+                                        out_featureclass,
+                                        clear_way_length, 
+                                        runway_type, 
+                                        None, # Airport Elevation will come from Z value of in_features3D
                                         "CUSTOM_SPECIFICATION",
                                         "FEET",
                                         "SLOPE",
