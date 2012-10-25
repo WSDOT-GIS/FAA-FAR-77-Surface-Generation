@@ -17,12 +17,57 @@
 	</natures>
 	<filteredResources>
 		<filter>
-			<id>1350506085509</id>
+			<id>1351206026806</id>
 			<name></name>
-			<type>13</type>
+			<type>10</type>
 			<matcher>
 				<id>org.eclipse.ui.ide.multiFilter</id>
-				<arguments>1.0-name-matches-false-true-.+\.pyt?$</arguments>
+				<arguments>1.0-name-matches-false-true-^scratch(\.gdb)?$</arguments>
+			</matcher>
+		</filter>
+		<filter>
+			<id>1351206026836</id>
+			<name></name>
+			<type>10</type>
+			<matcher>
+				<id>org.eclipse.ui.ide.multiFilter</id>
+				<arguments>1.0-name-matches-false-false-Data</arguments>
+			</matcher>
+		</filter>
+		<filter>
+			<id>1351206026865</id>
+			<name></name>
+			<type>6</type>
+			<matcher>
+				<id>org.eclipse.ui.ide.multiFilter</id>
+				<arguments>1.0-name-matches-false-false-*.pyt.xml</arguments>
+			</matcher>
+		</filter>
+		<filter>
+			<id>1351206026902</id>
+			<name></name>
+			<type>6</type>
+			<matcher>
+				<id>org.eclipse.ui.ide.multiFilter</id>
+				<arguments>1.0-name-matches-false-false-Toolbox.tbx</arguments>
+			</matcher>
+		</filter>
+		<filter>
+			<id>1351206026922</id>
+			<name></name>
+			<type>6</type>
+			<matcher>
+				<id>org.eclipse.ui.ide.multiFilter</id>
+				<arguments>1.0-name-matches-false-false-SurfaceGeneration.mxd</arguments>
+			</matcher>
+		</filter>
+		<filter>
+			<id>1351206026957</id>
+			<name></name>
+			<type>10</type>
+			<matcher>
+				<id>org.eclipse.ui.ide.multiFilter</id>
+				<arguments>1.0-name-matches-false-false-*.gdb</arguments>
 			</matcher>
 		</filter>
 	</filteredResources>
