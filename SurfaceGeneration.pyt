@@ -122,15 +122,7 @@ class LineToFar77(object):
                       "Terrain Layer",
                       "TIN Layer"],
             parameterType="Required")
-        
-        #clearwayLengthParam = arcpy.Parameter(
-        #      name="clear_way_length",
-        #      displayName="Clearway Length",
-        #      direction="Input",
-        #      datatype="Double",
-        #      parameterType="Required"
-        #      )
-        
+
         isPreparedHardSurfaceParam = arcpy.Parameter(
              name="is_prepared_hard_surface",
              displayName="Is prepared hard surface?",
