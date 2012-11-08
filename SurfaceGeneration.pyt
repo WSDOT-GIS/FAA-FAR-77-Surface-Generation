@@ -205,11 +205,13 @@ class LineToFar77(object):
         
         result = arcpy.management.GetCount(in_features)
         inFeatureCount = result.getOutput(0)
-        arcpy.AddMessage("in_features: %s" % inFeatureCount)
+        messages.addMessage("in_features: %s" % inFeatureCount)
         inFeatureCount = int(inFeatureCount)
         
         if inFeatureCount <= 0:
-            arcpy.AddWarning("in_features contains no features. %s" % inFeatureCount)
+            # Use 010151: features found in <value>. Possible empty feature class.  http://resources.arcgis.com/en/help/main/10.1/index.html#//00vq0000000m010151
+            # messages.addMessage("in_features contains no features. %s" % inFeatureCount)
+            messages.addIDMessage(1, 010151, "in_features")
             return
         
         clear_way_length = 0
@@ -235,7 +237,7 @@ class LineToFar77(object):
         conical_surface_offset = far77Params.conical_surface_offset
         transitional_surface_slope = far77Params.transitional_surface_slope
         
-        arcpy.AddMessage("Executing Interpolate Shape tool")
+        messages.addMessage("Executing Interpolate Shape tool")
         # Get the elevations of the runways.  Output will be in a new feature class. 
         # Create the name for the output runways feature class with elevations.
         in_features3D = arcpy.CreateUniqueName("runwayCenterlines", production_workspace)
@@ -247,7 +249,7 @@ class LineToFar77(object):
         ##   "ObstructionIdSurface")
         template = os.path.join(production_workspace, "Airspace", 
                                 "ObstructionIdSurface")
-        arcpy.AddMessage("Creating featureclass %s in %s using template %s..." % (out_name, out_path, template))
+        messages.addMessage("Creating featureclass %s in %s using template %s..." % (out_name, out_path, template))
         arcpy.management.CreateFeatureclass(out_path, out_name, 
                                             template=template,
                                             has_z="SAME_AS_TEMPLATE")
@@ -255,7 +257,7 @@ class LineToFar77(object):
         arcpy.InterpolateShape_3d(in_surface, in_features, in_features3D, 
                                   vertices_only="VERTICES_ONLY")
         
-        arcpy.AddMessage("Executing the FAAFAR77 tool")
+        messages.addMessage("Executing the FAAFAR77 tool")
         
         try:
             # execute the FAA FAR 77 tool
@@ -282,7 +284,7 @@ class LineToFar77(object):
                                         conical_surface_offset,
                                         transitional_surface_slope)
         except arcpy.ExecuteError as ex:
-            arcpy.AddMessage(arcpy.GetMessages())
+            messages.AddGPMessages()
             raise
         finally:
             if arcpy.Exists(in_features3D):
