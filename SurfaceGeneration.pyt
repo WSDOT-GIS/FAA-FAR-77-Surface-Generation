@@ -224,10 +224,20 @@ class LineToFar77(object):
                           runway_centerline[3]
             )])
         runway_centerline = arcpy.Polyline(array, sr)
+        del array
         
-        in_features = [runway_centerline]
+        # Create a unique name for the feature class that will contain the input polyline.
+        in_features = arcpy.CreateUniqueName("runwayCenterlines", arcpy.env.scratchGDB)
+        # Create the feature class for the input data.
+        out_path, out_name = os.path.split(in_features)
+        arcpy.management.CreateFeatureclass(out_path, out_name, "POLYLINE", spatial_reference=sr)
+        messages.AddGPMessages()
+        # Add the input data.
+        with arcpy.da.InsertCursor(in_features, ("SHAPE@")) as cursor:
+            cursor.insertRow((runway_centerline,))
         
-        del array, runway_centerline, lineCoords, sr
+        
+        del runway_centerline, lineCoords, sr, out_path, out_name
         
         in_surface = parameters[self._ELEVATION_DATA].valueAsText
         production_workspace = parameters[self._PRODUCTION_DB_INDEX].valueAsText
@@ -291,6 +301,7 @@ class LineToFar77(object):
         # Create a 3D version of the input 2D features.
         messages.addMessage("Getting elevation data for the input runways...")
         arcpy.env.outputCoordinateSystem = arcpy.SpatialReference(2927)
+        
         arcpy.InterpolateShape_3d(in_surface, in_features, in_features3D)
         messages.AddGPMessages()
         
@@ -315,7 +326,7 @@ class LineToFar77(object):
                                         out_featureclass,
                                         clear_way_length, 
                                         runway_type, 
-                                        airportElevation, #None, # Airport Elevation will come from Z value of in_features3D
+                                        airportElevation,
                                         "CUSTOM_SPECIFICATION",
                                         "FEET",
                                         "SLOPE",
@@ -336,7 +347,10 @@ class LineToFar77(object):
             messages.AddGPMessages()
             raise
         finally:
-            if arcpy.Exists(in_features3D):
-                arcpy.management.Delete(in_features3D)
+            # Delete temporary feature classes.
+            for fc in (in_features, in_features3D):
+                if arcpy.Exists(fc):
+                    arcpy.management.Delete(fc)
+                    messages.AddGPMessages()
              
         return
