@@ -316,7 +316,7 @@ class LineToFar77(object):
         try:
             # execute the FAA FAR 77 tool
             arcpy.FAAFAR77_aeronautical(in_features3D, 
-                                        production_workspace, 
+                                        # production_workspace, This param. was removed from Aero SP1. 
                                         out_featureclass,
                                         clear_way_length, 
                                         runway_type, 
