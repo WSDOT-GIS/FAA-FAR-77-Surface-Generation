@@ -287,9 +287,10 @@ class LineToFar77(object):
         
         # Create output feature class.
         out_path, out_name = os.path.split(out_featureclass)
-        ##template = os.path.join(os.path.dirname(__file__),
-        ##   "Data", "Templates", "ProductionWorkspace.gdb", "Airspace", 
-        ##   "ObstructionIdSurface")
+
+        # Set the output coordinate system if it is not already set.
+        if not arcpy.env.outputCoordinateSystem:
+            arcpy.env.outputCoordinateSystem = arcpy.SpatialReference(3857)
         template = os.path.join(production_workspace, "Airspace", 
                                 "ObstructionIdSurface")
         messages.addMessage("Creating featureclass %s in %s using template %s..." % (out_name, out_path, template))
@@ -300,7 +301,7 @@ class LineToFar77(object):
         
         # Create a 3D version of the input 2D features.
         messages.addMessage("Getting elevation data for the input runways...")
-        arcpy.env.outputCoordinateSystem = arcpy.SpatialReference(2927)
+        
         
         arcpy.InterpolateShape_3d(in_surface, in_features, in_features3D)
         messages.AddGPMessages()
