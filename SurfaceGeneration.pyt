@@ -226,18 +226,10 @@ class LineToFar77(object):
         runway_centerline = arcpy.Polyline(array, sr)
         del array
         
-        # Create a unique name for the feature class that will contain the input polyline.
-        in_features = arcpy.CreateUniqueName("runwayCenterlines", arcpy.env.scratchGDB)
-        # Create the feature class for the input data.
-        out_path, out_name = os.path.split(in_features)
-        arcpy.management.CreateFeatureclass(out_path, out_name, "POLYLINE", spatial_reference=sr)
-        messages.AddGPMessages()
-        # Add the input data.
-        with arcpy.da.InsertCursor(in_features, ("SHAPE@")) as cursor:
-            cursor.insertRow((runway_centerline,))
+        in_features = [runway_centerline]
         
         
-        del runway_centerline, lineCoords, sr, out_path, out_name
+        del runway_centerline, lineCoords, sr #, out_path, out_name
         
         in_surface = parameters[self._ELEVATION_DATA].valueAsText
         production_workspace = parameters[self._PRODUCTION_DB_INDEX].valueAsText
@@ -349,9 +341,8 @@ class LineToFar77(object):
             raise
         finally:
             # Delete temporary feature classes.
-            for fc in (in_features, in_features3D):
-                if arcpy.Exists(fc):
-                    arcpy.management.Delete(fc)
-                    messages.AddGPMessages()
+            if arcpy.Exists(in_features3D):
+                arcpy.management.Delete(in_features3D)
+                messages.AddGPMessages()
              
         return
