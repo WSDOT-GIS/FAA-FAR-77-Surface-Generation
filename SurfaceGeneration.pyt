@@ -4,7 +4,7 @@ surfaces.
 
 import os, uuid, re
 import arcpy
-
+import arcpy.da as da
 
 class Toolbox(object):
     def __init__(self):
@@ -204,6 +204,7 @@ class LineToFar77(object):
         out_featureclass = parameters[self._OUTPUT_FEATURE_CLASS_INDEX].valueAsText
         
         result = arcpy.management.GetCount(in_features)
+        messages.AddGPMessages()
         inFeatureCount = result.getOutput(0)
         messages.addMessage("in_features: %s" % inFeatureCount)
         inFeatureCount = int(inFeatureCount)
@@ -253,9 +254,24 @@ class LineToFar77(object):
         arcpy.management.CreateFeatureclass(out_path, out_name, 
                                             template=template,
                                             has_z="SAME_AS_TEMPLATE")
+        messages.AddGPMessages()
         
-        arcpy.InterpolateShape_3d(in_surface, in_features, in_features3D, 
-                                  vertices_only="VERTICES_ONLY")
+        # Create a 3D version of the input 2D features.
+        messages.addMessage("Getting elevation data for the input runways...")
+        arcpy.InterpolateShape_3d(in_surface, in_features, in_features3D)
+        messages.AddGPMessages()
+        
+        # Add ZMax field
+        messages.addMessage("Determining max. elevation for each runway...")
+        arcpy.AddZInformation_3d(in_features3D, "Z_MAX")
+        messages.AddGPMessages()
+        
+        # Get the elevation "Z_MAX" from first feature.
+        airportElevation = None
+        with da.SearchCursor(in_features3D, ["Z_MAX"]) as cursor:
+            for row in cursor:
+                airportElevation = row[0]
+                break
         
         messages.addMessage("Executing the FAAFAR77 tool")
         
@@ -266,7 +282,7 @@ class LineToFar77(object):
                                         out_featureclass,
                                         clear_way_length, 
                                         runway_type, 
-                                        None, # Airport Elevation will come from Z value of in_features3D
+                                        airportElevation, #None, # Airport Elevation will come from Z value of in_features3D
                                         "CUSTOM_SPECIFICATION",
                                         "FEET",
                                         "SLOPE",
