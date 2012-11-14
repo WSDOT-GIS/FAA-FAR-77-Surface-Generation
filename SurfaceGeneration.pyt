@@ -81,12 +81,13 @@ class Far77Params(object):
              self.horizontal_surface_radius = 10000
 
 class LineToFar77(object):
-    _IN_FEATURES_INDEX = 0
-    _PRODUCTION_DB_INDEX = 1
-    _ELEVATION_DATA = 2
-    _IS_PREPARED_HARD_SURFACE_INDEX = 3
-    _RUNWAY_TYPE_INDEX = 4
-    _OUTPUT_FEATURE_CLASS_INDEX = 5
+    _RUNWAY_LINE_INDEX = 0
+    _RUNWAY_SPATIAL_REF_INDEX = 1
+    _PRODUCTION_DB_INDEX = 2
+    _ELEVATION_DATA = 3
+    _IS_PREPARED_HARD_SURFACE_INDEX = 4
+    _RUNWAY_TYPE_INDEX = 5
+    _OUTPUT_FEATURE_CLASS_INDEX = 6
     
     def __init__(self):
         """Define the tool (tool name is the name of the class)."""
@@ -96,16 +97,22 @@ class LineToFar77(object):
 
     def getParameterInfo(self):
         """Define parameter definitions"""
-        lineFeaturesParam = arcpy.Parameter(
-            name="line_features",
-            displayName="Line Features",
+        
+        runwayLineParam = arcpy.Parameter(
+            name="runway_line",
+            displayName="Runway Line",
             direction="Input",
-            datatype="Feature Set",
+            datatype="Line",
             parameterType="Required")
-        # Supply a template for the line feature set.
-        lineFeaturesParam.value = os.path.join(os.path.dirname(__file__),
-           "Data", "Templates", "ProductionWorkspace.gdb", "Airfield", 
-           "RunwayCenterline")
+        
+        runwaySpatialRefParam = arcpy.Parameter(
+            name="runway_spatial_reference",
+            displayName="Runway Spatial Reference",
+            direction="Input",
+            datatype="Spatial Reference",
+            parameterType="Optional")
+        # Set the default value to web mercator auxiliary sphere.
+        runwaySpatialRefParam.value = arcpy.SpatialReference(3857).exportToString()
         
         productionLibraryParam = arcpy.Parameter(
              name="production_database",
@@ -157,7 +164,7 @@ class LineToFar77(object):
             parameterType="Required")
         outputFCParam.value = arcpy.CreateUniqueName("faafar77", arcpy.env.scratchGDB)
         
-        params = [lineFeaturesParam, productionLibraryParam, elevationParam, isPreparedHardSurfaceParam, 
+        params = [runwayLineParam, runwaySpatialRefParam, productionLibraryParam, elevationParam, isPreparedHardSurfaceParam, 
                   runwayTypeParam, outputFCParam]
         return params
 
@@ -196,7 +203,32 @@ class LineToFar77(object):
         @param messages: The messages for the tool.
         """
         # Feature Set
-        in_features = parameters[self._IN_FEATURES_INDEX].value
+        runway_centerline = parameters[self._RUNWAY_LINE_INDEX].valueAsText
+        lineCoords = re.findall(r"[^\s;,]+", runway_centerline)
+
+            
+        messages.addMessage(runway_centerline)
+        runway_centerline = map(float, lineCoords)
+        #messages.addMessage(runway_centerline)
+        
+        # TODO Create input feature class.
+        sr = parameters[self._RUNWAY_SPATIAL_REF_INDEX].valueAsText
+        
+        
+        array = arcpy.Array([
+            arcpy.Point(
+                        runway_centerline[0], 
+                        runway_centerline[1]
+            ),arcpy.Point(
+                          runway_centerline[2],
+                          runway_centerline[3]
+            )])
+        runway_centerline = arcpy.Polyline(array, sr)
+        
+        in_features = [runway_centerline]
+        
+        del array, runway_centerline, lineCoords, sr
+        
         in_surface = parameters[self._ELEVATION_DATA].valueAsText
         production_workspace = parameters[self._PRODUCTION_DB_INDEX].valueAsText
         isPreparedHardSurface = parameters[self._IS_PREPARED_HARD_SURFACE_INDEX].value
@@ -258,6 +290,7 @@ class LineToFar77(object):
         
         # Create a 3D version of the input 2D features.
         messages.addMessage("Getting elevation data for the input runways...")
+        arcpy.env.outputCoordinateSystem = arcpy.SpatialReference(2927)
         arcpy.InterpolateShape_3d(in_surface, in_features, in_features3D)
         messages.AddGPMessages()
         
