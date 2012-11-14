@@ -226,6 +226,7 @@ class LineToFar77(object):
         runway_centerline = arcpy.Polyline(array, sr)
         del array
         
+        # Create an array of features to pass in to the 
         in_features = [runway_centerline]
         
         
@@ -336,10 +337,8 @@ class LineToFar77(object):
                                         conical_surface_slope,
                                         conical_surface_offset,
                                         transitional_surface_slope)
-        except arcpy.ExecuteError as ex:
-            messages.AddGPMessages()
-            raise
         finally:
+            messages.AddGPMessages()
             # Delete temporary feature classes.
             if arcpy.Exists(in_features3D):
                 arcpy.management.Delete(in_features3D)
