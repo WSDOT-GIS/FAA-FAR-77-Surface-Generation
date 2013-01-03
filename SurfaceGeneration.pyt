@@ -102,7 +102,7 @@ class LineToFar77(object):
             name="runway_line",
             displayName="Runway Line",
             direction="Input",
-            datatype="Line",
+            datatype="String", #"Line",
             parameterType="Required")
         
         runwaySpatialRefParam = arcpy.Parameter(
