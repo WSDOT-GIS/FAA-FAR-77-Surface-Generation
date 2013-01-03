@@ -83,7 +83,6 @@ class Far77Params(object):
 class LineToFar77(object):
     _RUNWAY_LINE_INDEX = 0
     _RUNWAY_SPATIAL_REF_INDEX = 1
-    #_PRODUCTION_DB_INDEX = 2
     _ELEVATION_DATA = 2
     _IS_PREPARED_HARD_SURFACE_INDEX = 3
     _RUNWAY_TYPE_INDEX = 4
@@ -113,12 +112,6 @@ class LineToFar77(object):
             parameterType="Optional")
         # Set the default value to web mercator auxiliary sphere.
         runwaySpatialRefParam.value = arcpy.SpatialReference(3857).exportToString()
-        
-        ##productionLibraryParam = arcpy.Parameter(
-        ##     name="production_database",
-        ##     displayName="Production Database",
-        ##     direction="Input",
-        ##     datatype="Workspace")
         
         elevationParam = arcpy.Parameter(
             name="elevation_layer",
@@ -165,7 +158,6 @@ class LineToFar77(object):
         outputFCParam.value = arcpy.CreateUniqueName("faafar77", arcpy.env.scratchGDB)
         
         params = [runwayLineParam, runwaySpatialRefParam, 
-                  # productionLibraryParam, 
                   elevationParam, isPreparedHardSurfaceParam, 
                   runwayTypeParam, outputFCParam]
         return params
@@ -181,22 +173,11 @@ class LineToFar77(object):
         outputFCParam = parameters[self._OUTPUT_FEATURE_CLASS_INDEX]
         if not outputFCParam.altered:
             outputFCParam.value = arcpy.CreateUniqueName("faafar77", arcpy.env.scratchGDB)
-            #outputFCParam.value = os.path.join(arcpy.env.scratchGDB,"far77%s" % uuid.uuid1())
         return
 
     def updateMessages(self, parameters):
         """Modify the messages created by internal validation for each tool
         parameter.  This method is called after internal validation."""
-        ##productionWSParam = parameters[self._PRODUCTION_DB_INDEX]
-        ##if productionWSParam.altered:
-        ##    if not arcpy.Exists(productionWSParam.valueAsText):
-        ##        # Add a standard "Workspace does not exist" message.
-        ##        productionWSParam.setIDMessage(message_type="ERROR", 
-        ##                                       message_ID=000535)
-        ##    else:
-        ##        # If no problems are detected, clear messages
-        ##        productionWSParam.clearMessage()
-        ##        pass
         return
 
     def execute(self, parameters, messages):
@@ -204,19 +185,21 @@ class LineToFar77(object):
         @param parameters: The parameters for the tool.
         @param messages: The messages for the tool.
         """
-        # Feature Set
+
+        # Convert the runway centerline string into a polyline.
         runway_centerline = parameters[self._RUNWAY_LINE_INDEX].valueAsText
+        # Split string into component number strings.
         lineCoords = re.findall(r"[^\s;,]+", runway_centerline)
 
             
         messages.addMessage(runway_centerline)
+        # Convert strings into floats.
         runway_centerline = map(float, lineCoords)
-        #messages.addMessage(runway_centerline)
         
-        # TODO Create input feature class.
+        
         sr = parameters[self._RUNWAY_SPATIAL_REF_INDEX].valueAsText
         
-        
+        # Create a polyline from the numbers.
         array = arcpy.Array([
             arcpy.Point(
                         runway_centerline[0], 
@@ -228,11 +211,11 @@ class LineToFar77(object):
         runway_centerline = arcpy.Polyline(array, sr)
         del array
         
-        # Create an array of features to pass in to the 
+        # Create an array of features to pass in to the interpolate shape tool.
         in_features = [runway_centerline]
         
         
-        del runway_centerline, lineCoords, sr #, out_path, out_name
+        del runway_centerline, lineCoords, sr
         
         in_surface = parameters[self._ELEVATION_DATA].valueAsText
         ## production_workspace = parameters[self._PRODUCTION_DB_INDEX].valueAsText
@@ -278,7 +261,6 @@ class LineToFar77(object):
         messages.addMessage("Executing Interpolate Shape tool")
         # Get the elevations of the runways.  Output will be in a new feature class. 
         # Create the name for the output runways feature class with elevations.
-        ## in_features3D = arcpy.CreateUniqueName("runwayCenterlines", production_workspace)
         in_features3D = arcpy.CreateUniqueName("runwayCenterlines", arcpy.env.scratchGDB)
         
         # Create output feature class.
@@ -287,12 +269,7 @@ class LineToFar77(object):
         # Set the output coordinate system if it is not already set.
         if not arcpy.env.outputCoordinateSystem:
             arcpy.env.outputCoordinateSystem = arcpy.SpatialReference(3857)
-        #template = os.path.join(production_workspace, "Airspace", 
-        #                        "ObstructionIdSurface")
-        ##messages.addMessage("Creating featureclass %s in %s using template %s..." % (out_name, out_path, template))
-        ##arcpy.management.CreateFeatureclass(out_path, out_name, 
-        ##                                    template=template,
-        ##                                    has_z="SAME_AS_TEMPLATE")
+        # Create the feature class for the FAA FAR 77 tool output.
         arcpy.management.CreateFeatureclass(out_path, out_name, 
                                     geometry_type="POLYGON",
                                     has_z="ENABLED")
@@ -322,7 +299,6 @@ class LineToFar77(object):
         try:
             # execute the FAA FAR 77 tool
             arcpy.FAAFAR77_aeronautical(in_features3D, 
-                                        # production_workspace, This param. was removed from Aero SP1. 
                                         out_featureclass,
                                         clear_way_length, 
                                         runway_type, 
